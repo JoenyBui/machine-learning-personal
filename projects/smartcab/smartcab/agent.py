@@ -23,7 +23,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-
+        self.t = 1
 
     def reset(self, destination=None, testing=False):
         """ The reset function is called at the beginning of each trial.
@@ -39,6 +39,15 @@ class LearningAgent(Agent):
         # Update epsilon using a decay function of your choice
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
+        if testing:
+            self.epsilon = 0.0
+            self.alpha = 0.0
+        else:
+            # self.epsilon = self.epsilon - 0.05
+
+            self.epsilon = 0.99**self.t
+
+            self.t += 1
 
         return None
 
@@ -55,25 +64,26 @@ class LearningAgent(Agent):
 
         # Which is the sensor data from the SmartCab including:
         #   'light': the color of the light
-        #   'left': the intended direction of travel for a vehicle to the Smartcab's left.
+        #   'left': the intended direction of travel for a vehicle to the SmartCab's left.
         #           Return None if no vehicle is present.
-        #   'right': the intended direction of travel for a vehicle to the Smartcab's left.
+        #   'right': the intended direction of travel for a vehicle to the SmartCab's left.
         #            Return None if no vehicle is present.
-        #   'oncoming': the intended direction of travel for a vehical across the intersections from the Smartcab.
+        #   'oncoming': the intended direction of travel for a vehicle across the intersections from the SmartCab.
         #               Return None if no vehicle is present.
-        #   'deadline': which is the number of actions remaining for the smartcab to reach the destination
-        #               before running out of time.
         inputs = self.env.sense(self)           # Visual input - intersection light and traffic
+
+        #   'deadline': which is the number of actions remaining for the SmartCab to reach the destination
+        #               before running out of time.
         deadline = self.env.get_deadline(self)  # Remaining deadline
 
         ########### 
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent        
-        state = (waypoint, inputs['oncoming'], inputs['light'], deadline)
+        # state = (waypoint, inputs['light'], inputs['left'], inputs['right'], inputs['oncoming'])
+        state = (waypoint, inputs['light'], inputs['oncoming'])
 
         return state
-
 
     def get_maxQ(self, state):
         """ The get_max_Q function is called when the agent is asked to find the
@@ -83,10 +93,9 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Calculate the maximum Q-value of all actions for a given state
+        maxQ = max(self.Q[state].items(), key=lambda x: x[1])[0]
 
-        maxQ = None
-
-        return maxQ 
+        return maxQ
 
 
     def createQ(self, state):
@@ -125,8 +134,7 @@ class LearningAgent(Agent):
         #   Otherwise, choose an action with the highest Q-value for the current state
 
         if self.learning:
-            possible_actions = self.Q[state]
-            action_with_max_Q = max(possible_actions.items(), key=lambda x: x[1])[0]
+            action_with_max_Q = self.get_maxQ(state)
 
             choose_using_epsilon = random.random() < 1 - self.epsilon
             if not choose_using_epsilon:
@@ -192,7 +200,12 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, learning=False)
+    agent = env.create_agent(
+        LearningAgent,
+        learning=True,
+        epsilon=0.5,
+        alpha=0.9
+    )
     
     ##############
     # Follow the driving agent
@@ -214,7 +227,8 @@ def run():
         env,
         update_delay=0.01,
         display=False,
-        log_metrics=True
+        log_metrics=True,
+        optimized=True
     )
     
     ##############
@@ -223,7 +237,8 @@ def run():
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
     sim.run(
-        n_test=10
+        tolerance=0.0005,
+        n_test=200
     )
 
 
