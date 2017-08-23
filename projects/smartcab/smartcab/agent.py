@@ -4,6 +4,65 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
+"""
+# Notes From Reviewer
+
+I am guessing these charts are with all 5 features. I think the issue is that you are decaying your epsilon too quickly.
+You need to spend more time exploring so you agent can learn the optimal actions before testing. You can also increase
+the number of testing trials above 10 (the default) as this will help reduce any bad luck tests. But one major accident
+will ruin your safety rating.
+
+Here are some general advices about the parameters.
+
+# epsilon manages exploration vs exploitation
+
+The epsilon system is designed to manage the exploration vs exploitation system.
+
+It's a constant battle in reinforcement learning to balance exploration with exploitation. That is trying new actions
+in order to find the optimal policy, while exploiting enough to be successful at the task.
+
+In this simulation, it's actually possible to just generate enough trials in training that we can entirely learn the
+optimal policy. However more complicated scenarios may have much large state spaces in which the agent will never
+explore them all, so we need to more carefully balance exploration with exploitation. That's the goal of epsilon decay,
+and there is a lot of active research in this area.
+
+# epsilon tolerance
+
+epsilon tolerance is a value that triggers the switch from building our agent up with exploration/exploitation aka
+training (updating our q-tables) to testing, which just evaluates the agent we have. Setting a lower tolerance will
+increase the amount of training trials (updating the q-table), before testing (evaluating our agent) begins. Setting
+tolerance high will make the agent decrease training times.
+
+Keep in mind that if your epsilon decays very slowly, then you will have more training trials as well, and if your
+epsilon decays very quickly, you will have less training trials as well. So in some sense, the epsilon decay and
+epsilon tolerance both control the same "knob", which is "how long do we train for?"
+
+alpha
+
+Alpha is the learning rate. It's saying "how much should my agent 'remember' from this experience"
+If we look into the equation, which generally looks like this
+self.Q[state][action] = (1 - self.alpha) * self.Q[state][action] + self.alpha * reward
+or
+self.Q[state][action] = self.Q[state][action] + self.alpha * (reward - self.Q[state][action])
+then we see that alpha intuitively updates the reward, the current q-value, and puts them together.
+
+If we have a small alpha we basically only update a little bit of the reward and mostly keep what we already knew.
+if we have a large alpha, we update largely based on the reward.
+
+However -- we need to keep in mind the following :
+
+Our environment is deterministic:
+
+Given any state, the agent will always get the same exact reward for the same exact action (this is actually not
+completely true, there is a random nature to reward assignment, but the "good" rewards are always a step higher than
+the "bad" rewards). This deterministic property of reward assignment, makes alpha arbitrary (as long as it's >0). No
+matter how the rewards are updated (with large or small alpha's), the agent will get the largest value for "good"
+actions and smaller values for bad actions. So it should learn the optimal policy either way.
+
+Keep in mind, this is an edge case of q-learning - it applies because our Q-learning has Gamma = 0, there are no
+future rewards to consider (and balance against the alpha parameter) and also because our environment is deterministic
+in how rewards are assigned.
+"""
 
 class LearningAgent(Agent):
     """
@@ -48,7 +107,18 @@ class LearningAgent(Agent):
         else:
             # self.epsilon = self.epsilon - 0.05
 
-            self.epsilon = 0.99**self.t
+            # Decays too fast.
+            # self.epsilon = 0.50**self.t
+
+            # Exponential decay
+            alpha=0.001
+            self.epsilon = math.exp(-alpha*self.t)
+
+            # if self.epsilon > 0.0:
+            #     self.epsilon_decay = 1.0 / 200000 * self.t
+            #     self.epsilon = self.epsilon - self.epsilon_decay
+
+            # self.epsilon = 1/(self.t**2)
 
             self.t += 1
 
@@ -171,7 +241,7 @@ class LearningAgent(Agent):
 
         """
 
-        ########### 
+        ###########
         ## TO DO ##
         ###########
         # When learning, implement the value iteration update rule
@@ -195,10 +265,10 @@ class LearningAgent(Agent):
         self.learn(state, action, reward)   # Q-learn
 
         return
-        
+
 
 def run():
-    """ Driving function for running the simulation. 
+    """ Driving function for running the simulation.
         Press ESC to close the simulation, or [SPACE] to pause the simulation. """
 
     state = 'optimized'
@@ -206,7 +276,6 @@ def run():
     learning = False
     epsilon = 1
     alpha = 0.5
-    enforce_deadline = True
     update_delay = 0.01
     display = False
     log_metrics = True
@@ -216,19 +285,19 @@ def run():
 
     if state == 'unoptimized':
         update_delay = 0.01
-        n_test=10
-        learning=True
+        n_test = 10
+        learning = True
 
     elif state == 'optimized':
-        learning=True
-        n_test = 2000
+        learning = True
+        n_test = 1000
 
         update_delay=0.005
-        epsilon=0.5
-        alpha=0.9
+        epsilon=1.0
+        alpha=0.5
         log_metrics=True
         optimized=True
-        tolerance=0.0005
+        tolerance=0.001
 
     ##############
     # Create the environment
@@ -236,7 +305,7 @@ def run():
     #   verbose     - set to True to display additional output from the simulation
     #   num_dummies - discrete number of dummy agents in the environment, default is 100
     #   grid_size   - discrete number of intersections (columns, rows), default is (8, 6)
-    env = Environment(verbose=True)
+    env = Environment(verbose=False)
     
     ##############
     # Create the driving agent
