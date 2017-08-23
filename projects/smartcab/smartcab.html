@@ -16154,23 +16154,62 @@ I went through many different iterations on decaying function, tolerance, and al
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>After thinking it over, the features could have been reduced to three features [light, wayward, and oncoming].  The data shows this when I reduce the features and it had the same results.  This is because the policy ended up following the same rules as the U.S. driving law.</p>
+<p>After thinking it over, the features could have been reduced to four features [light, wayward, left, and oncoming].  The data shows this when I reduce the features and it had the same results.  This is because the policy ended up following the same rules as the U.S. driving law.</p>
 <p>Here are some of the rules:</p>
+<p>The order is [wayward, light, left, right, oncoming]</p>
 <ol>
-<li>The agent should take a right if the wayward is right, and the light is green - regardless if there are cars on the road.</li>
-<li>The agent should take go forward if the light is green and wayward is green.  He have the right away.</li>
-<li>On red, don't do anything.</li>
-</ol>
-<p>In the 'sim_improved-learning.txt':</p>
-<ol>
-<li><p>With 
- Right-Green-None, the right is highest 2.08.<br>
- Right-Green-Right, the right is highest 1.62.
- Right-Green-Forward, the right is highest 2.24.</p>
-<p>It's clear that turning right is valid on green.</p>
+<li><p>The agent should take a right if the wayward is right and the light is green - regardless if there are cars on the road.</p>
+<p>('right', 'green', 'left', None, 'forward')
+  -- forward : 0.47
+  -- left : -19.63
+  -- right : <strong>1.88</strong>
+  -- None : -4.91</p>
+<p>('right', 'green', 'forward', 'forward', 'left')
+  -- forward : 0.89
+  -- left : 0.26
+  -- right : <strong>1.48</strong>
+  -- None : 0.32</p>
+<p>These examples show that right scores the highest on the ('right', 'green', ...).</p>
 </li>
-<li>When it's wayward is foward and gree, the forward is always highest. </li>
-<li>When light is red, the 'None' option is always have the highest value.</li>
+<li><p>The agent should go forward if the light is green and wayward is green.  It have the right away.</p>
+<p>('forward', 'green', 'forward', 'left', 'left')
+  -- forward : <strong>1.94</strong>
+  -- left : 0.96
+  -- right : 0.54
+  -- None : 0.45</p>
+<p>This example is indicitive of the data, showing that going forward on green scores the highest.</p>
+</li>
+<li><p>The agent should take a left only if the light is green and there are no oncoming traffic.  It has to yield to the oncoming traffic.</p>
+<p>('left', 'green', 'left', 'right', 'forward')
+  -- forward : <strong>0.68</strong>
+  -- left : -10.00
+  -- right : 0.00
+  -- None : -3.69</p>
+<p>This one is slightly interesting - you definetely should taking a left when there is oncoming traffic.  But instead of waiting - it thinks it's better to go forward.  I am assuming it thinks you can take a left turn at a later time.</p>
+</li>
+<li><p>Do nothing on red unless the agent is taking a right, there are no cars on the left, and oncoming traffic is not taking a left.</p>
+<p>('right', 'red', None, None, 'right')
+  -- forward : -9.58
+  -- left : -39.97
+  -- right : <strong>1.97</strong>
+  -- None : 1.23</p>
+<p>('right', 'red', None, None, 'forward')
+  -- forward : -10.11
+  -- left : -10.32
+  -- right : <strong>1.41</strong>
+  -- None : 1.13</p>
+<p>('right', 'red', None, None, 'left')
+  -- forward : -9.65
+  -- left : -10.24
+  -- right : 1.16
+  -- None : <strong>1.54</strong></p>
+<p>('right', 'red', 'forward', None, None)
+  -- forward : -40.11
+  -- left : -39.47
+  -- right : -20.32
+  -- None : <strong>1.72</strong></p>
+<p>The examples show that right turn on red is valid unless the oncoming traffic is taking a left or if thre is a car in the left going forward.</p>
+</li>
 </ol>
 
 </div>
