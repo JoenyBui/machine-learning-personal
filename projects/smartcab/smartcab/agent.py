@@ -271,7 +271,7 @@ def run():
     """ Driving function for running the simulation.
         Press ESC to close the simulation, or [SPACE] to pause the simulation. """
 
-    state = 'optimized'
+    state = 'unoptimized'
 
     learning = False
     epsilon = 1
