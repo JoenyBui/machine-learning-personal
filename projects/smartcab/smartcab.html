@@ -16154,61 +16154,75 @@ I went through many different iterations on decaying function, tolerance, and al
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>After thinking it over, the features could have been reduced to four features [light, wayward, left, and oncoming].  The data shows this when I reduce the features and it had the same results.  This is because the policy ended up following the same rules as the U.S. driving law.</p>
-<p>Here are some of the rules:</p>
+<p>The agent goes through many different <code>states</code> and explore to finally determine the right policies.  Let's take the example of a common rule in the U.S. - which is the right turn on red.</p>
 <p>The order is [wayward, light, left, right, oncoming]</p>
+<hr>
+<h2 id="['right']['red'][None][None]['forward']">['right']['red'][None][None]['forward']<a class="anchor-link" href="#['right']['red'][None][None]['forward']">&#182;</a></h2><hr>
+<p><strong>. My instinct is that the agent should do nothing when the light is red, with the only exception is taking a right on red when there are no cars on the left going forward and there are no cars on the oncoming traffic taking a left.</strong></p>
+
+<pre><code>A.
+('right', 'red', None, None, 'right')
+ -- forward : -9.58
+ -- left : -39.97
+ -- right : **1.97**
+ -- None : 1.23
+
+B. 
+('right', 'red', None, None, 'forward')
+ -- forward : -10.11
+ -- left : -10.32
+ -- right : **1.41**
+ -- None : 1.13
+
+C.
+('right', 'red', None, None, 'left')
+ -- forward : -9.65
+ -- left : -10.24
+ -- right : 1.16
+ -- None : **1.54**
+
+D.
+('right', 'red', 'forward', None, None)
+ -- forward : -40.11
+ -- left : -39.47
+ -- right : -20.32
+ -- None : **1.72**
+
+
+</code></pre>
+<p>The four examples above bares out the scenario.  For <code>A</code> and <code>B</code>, the optimal solution is taking a right when the oncoming traffic is not taking a left.  The agent could take the suboptimal route which is <code>None</code> - which is safe but won't get us to where we need to go.  Which ever the case, going forward or left on a <code>Red</code> is a no go.</p>
+<p>Now example <code>C</code> and <code>D</code> shows a different story.  That given either the oncoming traffic takes a <code>left</code> (C) or the left car goes <code>forward</code> (D) the optimal solution is stay and do nothing.  One interesting observation is that even on <code>C</code>, taking a right is a valid suboptimal solution - which is concerning.</p>
+<p>After thinking it over, the features could have been reduced to four features [light, wayward, left, and oncoming].  The data shows this when I reduce the features and it had the same results.  This is because the policy ended up following the same rules as the U.S. driving law.</p>
+<p>Other policies I look into:</p>
 <ol>
 <li><p>The agent should take a right if the wayward is right and the light is green - regardless if there are cars on the road.</p>
 <p>('right', 'green', 'left', None, 'forward')
-  -- forward : 0.47
+  -- forward : 0.47 (Sub-Optimal)
   -- left : -19.63
-  -- right : <strong>1.88</strong>
+  -- right : <strong>1.88</strong> (Optimal)
   -- None : -4.91</p>
 <p>('right', 'green', 'forward', 'forward', 'left')
-  -- forward : 0.89
-  -- left : 0.26
-  -- right : <strong>1.48</strong>
-  -- None : 0.32</p>
+  -- forward : 0.89 (Sub-Optimal)
+  -- left : 0.26 (Sub-Optimal)
+  -- right : <strong>1.48</strong> (Optimal)
+  -- None : 0.32 (Sub-Optimal)</p>
 <p>These examples show that right scores the highest on the ('right', 'green', ...).</p>
 </li>
 <li><p>The agent should go forward if the light is green and wayward is green.  It have the right away.</p>
 <p>('forward', 'green', 'forward', 'left', 'left')
-  -- forward : <strong>1.94</strong>
-  -- left : 0.96
-  -- right : 0.54
-  -- None : 0.45</p>
+  -- forward : <strong>1.94</strong> (Optimal)
+  -- left : 0.96 (Sub-Optimal)
+  -- right : 0.54 (Sub-Optimal)
+  -- None : 0.45 (Sub-Optimal)</p>
 <p>This example is indicitive of the data, showing that going forward on green scores the highest.</p>
 </li>
 <li><p>The agent should take a left only if the light is green and there are no oncoming traffic.  It has to yield to the oncoming traffic.</p>
 <p>('left', 'green', 'left', 'right', 'forward')
-  -- forward : <strong>0.68</strong>
+  -- forward : <strong>0.68</strong> (Optimal)
   -- left : -10.00
-  -- right : 0.00
+  -- right : 0.00 (Sub-Optimal)
   -- None : -3.69</p>
-<p>This one is slightly interesting - you definetely should taking a left when there is oncoming traffic.  But instead of waiting - it thinks it's better to go forward.  I am assuming it thinks you can take a left turn at a later time.</p>
-</li>
-<li><p>Do nothing on red unless the agent is taking a right, there are no cars on the left, and oncoming traffic is not taking a left.</p>
-<p>('right', 'red', None, None, 'right')
-  -- forward : -9.58
-  -- left : -39.97
-  -- right : <strong>1.97</strong>
-  -- None : 1.23</p>
-<p>('right', 'red', None, None, 'forward')
-  -- forward : -10.11
-  -- left : -10.32
-  -- right : <strong>1.41</strong>
-  -- None : 1.13</p>
-<p>('right', 'red', None, None, 'left')
-  -- forward : -9.65
-  -- left : -10.24
-  -- right : 1.16
-  -- None : <strong>1.54</strong></p>
-<p>('right', 'red', 'forward', None, None)
-  -- forward : -40.11
-  -- left : -39.47
-  -- right : -20.32
-  -- None : <strong>1.72</strong></p>
-<p>The examples show that right turn on red is valid unless the oncoming traffic is taking a left or if thre is a car in the left going forward.</p>
+<p>This state and rule is interesting and might not be optimal.  Instead of waiting to take a left when there is  oncoming traffic, the max result is forward.  But instead of waiting - the agent thinks it's better to go forward.</p>
 </li>
 </ol>
 
